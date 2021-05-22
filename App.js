@@ -5,19 +5,26 @@ import * as Location from "expo-location";
 import axios from "axios";
 // custom imports
 import Loading from "./Loading.js";
+import Weather from "./Weather.js";
 
 const API_KEY = "edf10d3fce66a3d9f5952f66e705b8a3";
 
 export default function App() {
-  const [location, setLocation] = useState(null);
-  const [errorMsg, setErrorMsg] = useState(null);
   const [isLoading, setLoading] = useState(true);
-
+  const [val, setVal] = useState(null);
   const getWeather = async (lat, lon) => {
-    const { data } = await axios.get(
-      `http://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}`
+    const {
+      data: {
+        main: { temp },
+        weather,
+      },
+    } = await axios.get(
+      `http://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`
     );
-    console.log("THE WEATHER", data);
+    console.log("THE WEATHER", weather);
+
+    setVal({ temp, condition: weather[0].main });
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -25,12 +32,10 @@ export default function App() {
       try {
         const status = await Location.requestPermissionsAsync();
         if (status !== "granted") {
-          setErrorMsg("Permission to access location was denied");
+          Alert.alert("Permission to access location was denied");
           let location = await Location.getCurrentPositionAsync({});
           getWeather(location.coords.latitude, location.coords.longitude);
-          setLocation(location);
 
-          setLoading(true);
           return;
         }
       } catch (error) {
@@ -38,48 +43,17 @@ export default function App() {
       }
     })();
   }, []);
-
-  let text = "Waiting..";
-  if (errorMsg) {
-    text = errorMsg;
-  } else if (location) {
-    text = JSON.stringify(location);
-  }
-
+  console.log("THE STATE", val, isLoading);
   return (
     <>
-      {isLoading ? <Loading /> : <></>}
-      {console.log("THE State 👉👉👉 ", location, text)}
-      {/*<View style={styles.container}>
-      <View style={styles.yellowView}>
-        <Text>Lets 2 go!</Text>
-      </View>
-      <View style={styles.blueView}>
-        <Text>Lets 2 go!</Text>
-      </View>
-
-     <Text>Lets 2 go!</Text>
-      <Text>Lets 2 go!</Text>
-      <StatusBar style="auto" /> 
-    </View>*/}
+      {isLoading ? (
+        <Loading />
+      ) : (
+        <>
+          {console.log("THE WEATHER", val)}
+          <Weather temp={Math.round(val.temp)} condition={val.condition} />
+        </>
+      )}
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    // flexDirection: "row",
-    // backgroundColor: "#fff",
-    // alignItems: "center",
-    // justifyContent: "center",
-  },
-  yellowView: {
-    flex: 1,
-    backgroundColor: "yellow",
-  },
-  blueView: {
-    flex: 1,
-    backgroundColor: "blue",
-  },
-});
